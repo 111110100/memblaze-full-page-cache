@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.7.2] - 2026-03-25
+### Changed
+- **Asset Management**: Refactored admin styles and scripts to use `wp_enqueue_style()` and `wp_enqueue_script()` instead of inline tags, improving performance and standards compliance.
+- **File Organization**: Relocated all generated configuration files to `wp-content/uploads/memblaze-full-page-cache/` to follow standard WordPress directory patterns and ensure better portability.
+- **Directory Naming**: Corrected "memblaze-fullpage-cache" to "memblaze-full-page-cache" throughout the project for consistent naming.
+- **Documentation**: Updated `README.md` with new configuration paths and updated support contact information.
+
+### Added
+- **Sanitization Helpers**: Added missing helper functions `mfpc_log()`, `mfpc_print_r()`, and `mfpc_var_export()` for robust logging and data handling.
+- **Automated Directory Creation**: Added `wp_mkdir_p()` logic to ensure the configuration directory is created automatically with the correct permissions.
+
+### Fixed
+- **Security**: 
+    - Enhanced settings sanitization in `mfpc_sanitize_settings()` by adding `wp_unslash()`.
+    - Added strict regex validation for Memcached server hostnames and socket paths to prevent configuration injection.
+- **Robustness**: Defined `mfpc_log()` in `index-cached.php` to ensure error logging works correctly outside of the WordPress environment.
+
 ## [1.7.1] - 2026-03-12
 ### Changed
 - **File Renaming**: Renamed main plugin file from `memblaze-fpc.php` to `memblaze-full-page-cache.php`.
