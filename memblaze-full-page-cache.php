@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       MemBlaze Full Page Cache
  * Description:       Provides an admin interface to configure Memcached servers and cache rules for index-cached.php. Also allows purging cache on post save and generates Nginx upstream config.
- * Version:           1.7.2
+ * Version:           1.7.3
  * Author:            Erwin Lomibao
  * Author URI:        https://erwinlomibao.com/memblaze
  * License:           GPL-2.0-or-later
@@ -15,13 +15,12 @@ namespace MFPC;
 defined( 'ABSPATH' ) || exit; // Exit if accessed directly
 
 // --- Constants ---
-define( 'MFPC_VERSION', '1.7.1' );
+define( 'MFPC_VERSION', '1.7.3' );
 define( 'MFPC_OPTION_NAME', 'mfpc_settings' );
-define( 'MFPC_CONFIG_DIR', WP_CONTENT_DIR . '/uploads/memblaze-full-page-cache' );
-define( 'MFPC_PHP_CONFIG_FILE_PATH', MFPC_CONFIG_DIR . '/memcached-fp-config.php' );
+define( 'MFPC_PHP_CONFIG_FILE_PATH', WP_CONTENT_DIR . '/memcached-fp-config.php' );
 define( 'MFPC_NGINX_TEMPLATE_FILE_PATH', plugin_dir_path( __FILE__ ) . 'nginx-template.conf' );
-define( 'MFPC_NGINX_OUTPUT_FILE_PATH', MFPC_CONFIG_DIR . '/memcached_nginx.conf' ); // Output Nginx config here
-define( 'MFPC_NGINX_UPSTREAM_FILE_PATH', MFPC_CONFIG_DIR . '/memcached_upstream.conf' ); // Output Nginx upstream config here
+define( 'MFPC_NGINX_OUTPUT_FILE_PATH', WP_CONTENT_DIR . '/memcached_nginx.conf' ); // Output Nginx config here
+define( 'MFPC_NGINX_UPSTREAM_FILE_PATH', WP_CONTENT_DIR . '/memcached_upstream.conf' ); // Output Nginx upstream config here
 
 /**
  * Simple logging function.
@@ -29,21 +28,24 @@ define( 'MFPC_NGINX_UPSTREAM_FILE_PATH', MFPC_CONFIG_DIR . '/memcached_upstream.
  * @param mixed $message The message to log.
  */
 function mfpc_log( $message ) {
-    if ( is_array( $message ) || is_object( $message ) ) {
-        error_log( 'MFPC: ' . print_r( $message, true ) );
-    } else {
-        error_log( 'MFPC: ' . $message );
+    $options = mfpc_get_options();
+    if ( ! empty( $options['debug'] ) ) {
+        if ( is_array( $message ) || is_object( $message ) ) {
+            error_log( 'MFPC: ' . json_encode( $message ) );
+        } else {
+            error_log( 'MFPC: ' . $message );
+        }
     }
 }
 
 /**
- * Custom print_r wrapper.
+ * Custom array/object string representation (JSON instead of print_r).
  *
- * @param mixed $data The data to print.
- * @return string The printed data.
+ * @param mixed $data The data to represent.
+ * @return string The string representation.
  */
 function mfpc_print_r( $data ) {
-    return print_r( $data, true );
+    return is_scalar( $data ) ? (string) $data : json_encode( $data );
 }
 
 /**
@@ -1032,11 +1034,6 @@ function mfpc_sanitize_settings( $input ) {
         }
     }
 
-    // --- Ensure Directory Exists ---
-    if ( ! file_exists( MFPC_CONFIG_DIR ) ) {
-        wp_mkdir_p( MFPC_CONFIG_DIR );
-    }
-
     // --- Generate PHP Config File (for index-cached.php) ---
     $config_for_php_file = [
         'debug' => $new_input['debug'],
@@ -1143,7 +1140,7 @@ function mfpc_sanitize_settings( $input ) {
 // --- Admin JavaScript ---
 
 /**
- * Enqueue admin scripts and styles.
+ * Enqueue admin scripts.
  */
 function mfpc_enqueue_admin_scripts( $hook_suffix ) {
     // Only load on our specific settings page
@@ -1151,28 +1148,24 @@ function mfpc_enqueue_admin_scripts( $hook_suffix ) {
         return;
     }
 
-    wp_enqueue_style( 'mfpc-admin-style', plugin_dir_url( __FILE__ ) . 'admin-style.css', array(), MFPC_VERSION );
-    wp_enqueue_script( 'mfpc-admin-script', plugin_dir_url( __FILE__ ) . 'admin-script.js', array( 'jquery' ), MFPC_VERSION, true );
-
-    $content_types = [
-        'text/html',
-        'text/plain',
-        'application/json',
-        'application/xml',
-        'text/xml',
-        'application/rss+xml',
-        'application/atom+xml'
-    ];
+    wp_enqueue_script( 'mfpc-admin-script', plugin_dir_url( __FILE__ ) . 'admin-script.js', array( 'jquery' ), MFPC_VERSION, true ); // Use MFPC_VERSION
 
     $script_data = array(
         'optionName' => MFPC_OPTION_NAME,
         'noCacheText' => __( 'No cache', 'memblaze-full-page-cache' ),
-        'deleteText' => __( 'Delete', 'memblaze-full-page-cache' ),
         'ajax_url' => admin_url( 'admin-ajax.php' ), // Needed for potential future AJAX actions
-        'nonce' => wp_create_nonce( 'mfpc_admin_nonce' ), // Nonce for security
-        'contentTypes' => $content_types
+        'nonce' => wp_create_nonce( 'mfpc_admin_nonce' ) // Nonce for security
     );
     wp_localize_script( 'mfpc-admin-script', 'mfpcConfigData', $script_data );
+
+    // Add inline style for status and template
+    $custom_css = "
+        .mfpc-hidden-template { display: none !important; }
+        .mfpc-server-status.status-ok { color: #228B22; font-weight: bold; } /* ForestGreen */
+        .mfpc-server-status.status-error { color: #DC143C; font-weight: bold; } /* Crimson */
+        .mfpc-server-status.status-unknown { color: #777; font-style: italic; }
+    ";
+    wp_add_inline_style('wp-admin', $custom_css); // Attach to a common admin handle
 }
 \add_action( 'admin_enqueue_scripts', __NAMESPACE__ . '\mfpc_enqueue_admin_scripts' );
 
@@ -1304,7 +1297,7 @@ function mfpc_get_memcached_connection( $servers, $debug = false ) {
 
     if (!empty($servers_to_add)) {
         if ($memcached->addServers($servers_to_add)) {
-             if ($debug) mfpc_log("MFPC Purge: Added servers to Memcached connection (ID: {$persistent_id}): " . mfpc_print_r($servers_to_add, true));
+             if ($debug) mfpc_log("MFPC Purge: Added servers to Memcached connection (ID: {$persistent_id}): " . mfpc_print_r($servers_to_add));
              // Optional: Verify connection after adding servers
              // $stats = $memcached->getStats();
              // if (empty($stats)) { /* Handle connection failure */ }
@@ -1327,7 +1320,6 @@ function mfpc_get_memcached_connection( $servers, $debug = false ) {
 function mfpc_get_site_stats() {
     $stats = [
         'hits' => 0,
-        'misses' => 0,
         'ratio' => 0,
         'server_stats' => []
     ];
