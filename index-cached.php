@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 $mfpc_start = microtime(true);
 
 // --- Configuration Loading ---
-$mfpc_config_file = __DIR__ . '/wp-content/memcached-fp-config.php'; // Adjust path if needed
+$mfpc_config_file = __DIR__ . '/wp-content/uploads/memblaze-full-page-cache/memcached-fp-config.php'; // Adjust path if needed
 
 $mfpc_config = [];
 if ( file_exists( $mfpc_config_file ) ) {
@@ -139,28 +139,17 @@ if ( php_sapi_name() === 'cli' ) {
     }
 }
 
-// --- Sanitization ---
-$mfpc_request_uri = filter_var( wp_unslash( $_SERVER['REQUEST_URI'] ), FILTER_SANITIZE_URL );
-$mfpc_http_host = filter_var( wp_unslash( $_SERVER['HTTP_HOST'] ), FILTER_SANITIZE_FULL_SPECIAL_CHARS );
-
 /**
- * Placeholder for wp_unslash if WP is not loaded.
+ * Internal helper to navigate through an array, object, or scalar, and removes slashes from the values.
  */
-if ( ! function_exists( 'wp_unslash' ) ) {
-    // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
-    function wp_unslash( $data ) {
-        return stripslashes_deep( $data );
-    }
-}
-if ( ! function_exists( 'stripslashes_deep' ) ) {
-    // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
-    function stripslashes_deep( $value ) {
+if ( ! function_exists( 'mfpc_stripslashes_deep' ) ) {
+    function mfpc_stripslashes_deep( $value ) {
         if ( is_array( $value ) ) {
-            $value = array_map( 'stripslashes_deep', $value );
+            $value = array_map( 'mfpc_stripslashes_deep', $value );
         } elseif ( is_object( $value ) ) {
             $vars = get_object_vars( $value );
             foreach ( $vars as $key => $data ) {
-                $value->{$key} = stripslashes_deep( $data );
+                $value->{$key} = mfpc_stripslashes_deep( $data );
             }
         } elseif ( is_string( $value ) ) {
             $value = stripslashes( $value );
@@ -168,6 +157,19 @@ if ( ! function_exists( 'stripslashes_deep' ) ) {
         return $value;
     }
 }
+
+/**
+ * Internal helper to unslash data.
+ */
+if ( ! function_exists( 'mfpc_wp_unslash' ) ) {
+    function mfpc_wp_unslash( $data ) {
+        return mfpc_stripslashes_deep( $data );
+    }
+}
+
+// --- Sanitization ---
+$mfpc_request_uri = filter_var( mfpc_wp_unslash( $_SERVER['REQUEST_URI'] ), FILTER_SANITIZE_URL );
+$mfpc_http_host = filter_var( mfpc_wp_unslash( $_SERVER['HTTP_HOST'] ), FILTER_SANITIZE_FULL_SPECIAL_CHARS );
 $mfpc_matched_rule = false;
 
 // Check rules from config
