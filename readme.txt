@@ -3,7 +3,7 @@ Contributors: erwinlomibao
 Tags: cache, memcached, performance, full page cache, optimization
 Requires at least: 5.0
 Tested up to: 6.9
-Stable tag: 1.7.3
+Stable tag: 1.7.4
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -50,6 +50,10 @@ Yes, this plugin requires the `memcached` extension to be installed on your serv
 1. Main configuration dashboard showing settings and stats.
 
 == Changelog ==
+
+= 1.7.4 =
+* memblaze-full-page-cache.php: Fix undefined wp_unslash error by using global namespace backslash
+* index-cached.php: Fix undefined and redeclaration errors for wp_unslash and stripslashes_deep by using mfpc_ prefixed fallbacks
 
 = 1.7.3 =
 * Refined logging: Removed print_r() and replaced with json_encode() for production safety.

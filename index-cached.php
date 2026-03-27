@@ -2,7 +2,7 @@
 /**
  * @package index-cached.php
  * @author erwin lomibao
- * @version 1.7.3
+ * @version 1.7.4
  * @license GPLv2
  * @website https://github.com/111110100/memblaze-full-page-cache
  */

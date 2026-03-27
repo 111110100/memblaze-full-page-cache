@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       MemBlaze Full Page Cache
  * Description:       Provides an admin interface to configure Memcached servers and cache rules for index-cached.php. Also allows purging cache on post save and generates Nginx upstream config.
- * Version:           1.7.3
+ * Version:           1.7.4
  * Author:            Erwin Lomibao
  * Author URI:        https://erwinlomibao.com/memblaze
  * License:           GPL-2.0-or-later
@@ -15,7 +15,7 @@ namespace MFPC;
 defined( 'ABSPATH' ) || exit; // Exit if accessed directly
 
 // --- Constants ---
-define( 'MFPC_VERSION', '1.7.3' );
+define( 'MFPC_VERSION', '1.7.4' );
 define( 'MFPC_OPTION_NAME', 'mfpc_settings' );
 define( 'MFPC_CONFIG_DIR', WP_CONTENT_DIR . '/uploads/memblaze-full-page-cache' );
 define( 'MFPC_PHP_CONFIG_FILE_PATH', MFPC_CONFIG_DIR . '/memcached-fp-config.php' );
